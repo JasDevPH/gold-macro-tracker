@@ -1,103 +1,282 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import { useMacroData } from "@/hooks/useMacroData";
+import { useGetNewsQuery } from "@/redux/slices/apiSlice";
+import { useAppSelector } from "@/redux/hooks";
+import { useTimeAgo } from "@/hooks/useTimeAgo";
+import { Card } from "@/components/ui/Card";
+import { NewsModal } from "@/components/NewsModal";
+import { formatNumber } from "@/lib/utils";
+import { NewsItem } from "@/types";
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Clock,
+  MoreHorizontal,
+} from "lucide-react";
 
-export default function Home() {
+export default function Dashboard() {
+  const { data: macroData, isLoading: macroLoading } = useMacroData();
+  const { data: newsData, isLoading: newsLoading } = useGetNewsQuery();
+  const bias = useAppSelector((state) => state.bias);
+
+  const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const macroTimeAgo = useTimeAgo(macroData?.lastUpdated);
+  const newsTimeAgo = useTimeAgo(newsData?.lastUpdated);
+
+  const handleNewsClick = (newsItem: NewsItem) => {
+    setSelectedNews(newsItem);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedNews(null);
+  };
+
+  const getBiasConfig = (label: string) => {
+    switch (label) {
+      case "Strong Bullish":
+        return {
+          color: "text-emerald-500",
+          bg: "bg-emerald-50",
+          icon: TrendingUp,
+          border: "border-emerald-200",
+        };
+      case "Bullish":
+        return {
+          color: "text-green-500",
+          bg: "bg-green-50",
+          icon: TrendingUp,
+          border: "border-green-200",
+        };
+      case "Strong Bearish":
+        return {
+          color: "text-red-500",
+          bg: "bg-red-50",
+          icon: TrendingDown,
+          border: "border-red-200",
+        };
+      case "Bearish":
+        return {
+          color: "text-orange-500",
+          bg: "bg-orange-50",
+          icon: TrendingDown,
+          border: "border-orange-200",
+        };
+      default:
+        return {
+          color: "text-slate-500",
+          bg: "bg-slate-50",
+          icon: Minus,
+          border: "border-slate-200",
+        };
+    }
+  };
+
+  const biasConfig = getBiasConfig(bias.label);
+  const BiasIcon = biasConfig.icon;
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-light text-slate-900 tracking-tight">
+            Gold Macro Tracker
+          </h1>
+          <p className="text-slate-600 mt-2 font-light">
+            Real-time market sentiment analysis
+          </p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          {/* Auto-refresh status */}
+          <div className="flex items-center gap-4 mt-4 text-sm text-slate-500">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>
+                Auto-refresh: Yahoo (5m) • News (10m) • FRED/BLS (8:31 & 10:01
+                EST)
+              </span>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Bias Meter */}
+        <Card className={`p-8 mb-8 ${biasConfig.border} border-2`}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-medium text-slate-800">Market Bias</h2>
+            <div className={`p-3 rounded-full ${biasConfig.bg}`}>
+              <BiasIcon className={`w-6 h-6 ${biasConfig.color}`} />
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className={`text-5xl font-light ${biasConfig.color} mb-2`}>
+              {bias.label}
+            </div>
+            <div className="text-2xl text-slate-400 font-light mb-6">
+              Score: {bias.score > 0 ? "+" : ""}
+              {bias.score}
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2">
+              {bias.factors.map((factor, index) => (
+                <span
+                  key={index}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 rounded-full text-sm font-medium"
+                >
+                  {factor}
+                </span>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Macro Data Grid */}
+        <Card className="p-8 mb-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-xl font-medium text-slate-800">
+                Market Data
+              </h2>
+              {macroTimeAgo && (
+                <p className="text-sm text-slate-500 mt-1">
+                  Updated {macroTimeAgo}
+                </p>
+              )}
+            </div>
+            {macroLoading && (
+              <div className="flex items-center gap-2 text-slate-500">
+                <div className="animate-spin w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full"></div>
+                <span className="text-sm">Updating...</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="group">
+              <div className="text-sm font-medium text-slate-500 mb-2">
+                Gold
+              </div>
+              <div className="text-3xl font-light text-slate-900 mb-1">
+                ${formatNumber(macroData?.gold)}
+              </div>
+              <div className="text-xs text-slate-400">
+                Auto-updates every 5m
+              </div>
+            </div>
+
+            <div className="group">
+              <div className="text-sm font-medium text-slate-500 mb-2">DXY</div>
+              <div className="text-3xl font-light text-slate-900 mb-1">
+                {formatNumber(macroData?.dxy)}
+              </div>
+              <div className="text-xs text-slate-400">
+                Auto-updates every 5m
+              </div>
+            </div>
+
+            <div className="group">
+              <div className="text-sm font-medium text-slate-500 mb-2">CPI</div>
+              <div className="text-3xl font-light text-slate-900 mb-1">
+                {formatNumber(macroData?.cpi, 1)}
+              </div>
+              <div className="text-xs text-slate-400">8:31 & 10:01 EST</div>
+            </div>
+
+            <div className="group">
+              <div className="text-sm font-medium text-slate-500 mb-2">
+                10Y Yield
+              </div>
+              <div className="text-3xl font-light text-slate-900 mb-1">
+                {formatNumber(macroData?.yields10y)}%
+              </div>
+              <div className="text-xs text-slate-400">8:31 & 10:01 EST</div>
+            </div>
+
+            <div className="group">
+              <div className="text-sm font-medium text-slate-500 mb-2">
+                Fed Rate
+              </div>
+              <div className="text-3xl font-light text-slate-900 mb-1">
+                {formatNumber(macroData?.fedRate)}%
+              </div>
+              <div className="text-xs text-slate-400">8:31 & 10:01 EST</div>
+            </div>
+
+            <div className="group">
+              <div className="text-sm font-medium text-slate-500 mb-2">NFP</div>
+              <div className="text-3xl font-light text-slate-900 mb-1">
+                {macroData?.nfp
+                  ? `${formatNumber(macroData.nfp / 1000, 0)}K`
+                  : "—"}
+              </div>
+              <div className="text-xs text-slate-400">8:31 & 10:01 EST</div>
+            </div>
+          </div>
+        </Card>
+
+        {/* News Feed */}
+        <Card className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-medium text-slate-800">Market News</h2>
+            <div className="flex items-center gap-3">
+              {newsTimeAgo && (
+                <p className="text-sm text-slate-500">Updated {newsTimeAgo}</p>
+              )}
+              {newsLoading && (
+                <div className="flex items-center gap-2 text-slate-500">
+                  <div className="animate-spin w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full"></div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6 max-h-96 overflow-y-auto">
+            {newsData?.items?.slice(0, 8).map((item) => (
+              <article key={item.id} className="group">
+                <h3 className="font-medium text-slate-900 group-hover:text-slate-600 transition-colors mb-2 leading-snug">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    {item.title}
+                  </a>
+                </h3>
+                <p className="text-slate-600 text-sm mb-3 leading-relaxed">
+                  {item.description}
+                  {item.description && (
+                    <button
+                      onClick={() => handleNewsClick(item)}
+                      className="ml-2 text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                      see more
+                    </button>
+                  )}
+                </p>
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <span className="font-medium">{item.source}</span>
+                  <span>•</span>
+                  <time>{new Date(item.publishedAt).toLocaleDateString()}</time>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Card>
+
+        {/* News Modal */}
+        <NewsModal
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          newsItem={selectedNews}
+        />
+      </div>
     </div>
   );
 }
